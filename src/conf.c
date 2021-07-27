@@ -34,6 +34,7 @@
 #include <strings.h>
 #include <ctype.h>
 #include <errno.h>
+#include <fnmatch.h>
 
 #include "gettext.h"
 #define _(string) gettext(string)
@@ -47,6 +48,9 @@
 
 /* buffer size for configuration file lines */
 #define LINEBUFSIZE 501
+
+/* Flags for fnmatch function */
+#define FNM_NOFLAG 0
 
 
 /*
@@ -289,11 +293,19 @@ account_t *find_account_by_envelope_from(list_t *acc_list, const char *from)
         {
             continue;
         }
+		if (strchr(acc_from, '*') && fnmatch(acc_from, from, FNM_NOFLAG) != FNM_NOMATCH)
+		{
+			/*
+			 * This maches pattern like *@domain.tld or user.*@domain.tld
+			 */
+			a = acc_list->data;
+			break;
+		}
         if (from_detail && from_domain && !strchr(acc_from, '+'))
         {
             /*
              * Subaddressing matches the pattern /user+detail@domain/. Take `from` to
-             * match `acc_from` iff both user and domain match; i.e., ignore the detail.
+             * match `acc_from` if both user and domain match; i.e., ignore the detail.
              */
             acc_domain = strchr(acc_from, '@');
             if (acc_domain
